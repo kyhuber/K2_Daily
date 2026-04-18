@@ -3,13 +3,13 @@ import requests
 from datetime import datetime
 from anthropic import Anthropic
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
-OBSIDIAN_API_KEY = os.getenv("OBSIDIAN_API_KEY")
+OBSIDIAN_API_KEY = os.environ.get("OBSIDIAN_API_KEY")
 OBSIDIAN_PORT = 27123
 DATE_STR = datetime.now().strftime("%Y-%m-%d")
+DATE_DISPLAY = datetime.now().strftime("%A, %B %-d, %Y")
 VAULT_DAILY_PATH = f"Daily/{DATE_STR}.md"
 VAULT_CONTEXT_PATH = "context.md"
 
@@ -30,6 +30,34 @@ def read_note(path):
     else:
         print(f"Could not read {path}: {response.status_code}")
         return None
+
+def create_note(path, content=""):
+    """Create a note via the Obsidian REST API."""
+    url = f"{BASE_URL}/vault/{path}"
+    headers = {
+        "Authorization": f"Bearer {OBSIDIAN_API_KEY}",
+        "Content-Type": "text/markdown",
+    }
+    response = requests.put(
+        url,
+        headers=headers,
+        data=content.encode("utf-8"),
+        verify=False
+    )
+    return response.status_code in [200, 204]
+
+def ensure_daily_note_exists():
+    """Create today's daily note if it doesn't exist yet."""
+    existing = read_note(VAULT_DAILY_PATH)
+    if existing is not None:
+        return  # Already exists
+
+    print(f"Today's note not found. Creating {VAULT_DAILY_PATH}...")
+    template = f"# {DATE_DISPLAY}\n\n"
+    if create_note(VAULT_DAILY_PATH, template):
+        print("Daily note created.")
+    else:
+        print("Could not create daily note. Is Obsidian running?")
 
 def append_to_daily(content):
     url = f"{BASE_URL}/vault/{VAULT_DAILY_PATH}"
@@ -74,23 +102,26 @@ or two of genuine, human response.
 
 def main():
     print(f"Reading notes for {DATE_STR}...")
-    
+
+    # Create today's note if it doesn't exist
+    ensure_daily_note_exists()
+
     daily_note = read_note(VAULT_DAILY_PATH)
-    if not daily_note or daily_note.strip() == "":
-        print("No notes found for today. Nothing to reflect on.")
+    if not daily_note or daily_note.strip() == "" or daily_note.strip() == f"# {DATE_DISPLAY}":
+        print("No notes written yet for today. Nothing to reflect on.")
         return
-    
+
     context = read_note(VAULT_CONTEXT_PATH)
     if not context:
         print("Could not read context.md. Proceeding without context.")
         context = ""
-    
+
     print("Generating reflection...")
     reflection = generate_reflection(daily_note, context)
-    
+
     timestamp = datetime.now().strftime("%I:%M %p")
     output = f"\n\n---\n### Reflection — {timestamp}\n\n{reflection}"
-    
+
     append_to_daily(output)
     print("Done.")
 
