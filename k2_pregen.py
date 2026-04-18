@@ -8,6 +8,7 @@ Run manually: python3 k2_pregen.py
 Or schedule via launchd on the 1st of each month.
 """
 
+import os
 import requests
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
