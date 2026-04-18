@@ -2,8 +2,12 @@ import os
 import requests
 from datetime import datetime
 from anthropic import Anthropic
+from dotenv import load_dotenv
+import os
 
-OBSIDIAN_API_KEY = "e425c084bda45bf7266a225ceef600a2954568977d97d629861055759b7bb860"
+load_dotenv()
+
+OBSIDIAN_API_KEY = os.getenv("OBSIDIAN_API_KEY")
 OBSIDIAN_PORT = 27123
 DATE_STR = datetime.now().strftime("%Y-%m-%d")
 VAULT_DAILY_PATH = f"Daily/{DATE_STR}.md"
